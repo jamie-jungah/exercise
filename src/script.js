@@ -1,5 +1,26 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import gsap from 'gsap';
+import GUI from 'lil-gui';
+
+/**
+ * Debut
+ */
+const gui = new GUI({
+  width: 300,
+  title: 'Nice debug UI',
+  closeFolders: false,
+});
+// gui.close();
+// gui.hide();
+
+window.addEventListener('keydown', (event) => {
+  if (event.key == 'h') {
+    gui.show(gui._hidden);
+  }
+});
+
+const debugObject = {};
 
 /**
  * Base
@@ -10,29 +31,57 @@ const canvas = document.querySelector('canvas.webgl');
 // Scene
 const scene = new THREE.Scene();
 
-// Object
-// const geometry = new THREE.BoxGeometry(1, 1, 1, 4, 4, 4);
+/**
+ * Object
+ */
+debugObject.color = '#a778d8';
 
-const geometry = new THREE.BufferGeometry();
-
-const count = 50;
-const positionsArray = new Float32Array(count * 3 * 3);
-
-for (let i = 0; i < count * 3 * 3; i++) {
-  positionsArray[i] = (Math.random() - 0.5) * 4;
-}
-
-const positionsAttribute = new THREE.BufferAttribute(positionsArray, 3);
-geometry.setAttribute('position', positionsAttribute);
-
+const geometry = new THREE.BoxGeometry(1, 1, 1, 2, 2, 2);
 const material = new THREE.MeshBasicMaterial({
-  color: 0xff0000,
+  color: debugObject.color,
   wireframe: true,
 });
 const mesh = new THREE.Mesh(geometry, material);
 scene.add(mesh);
 
-// Sizes
+const cubeTweaks = gui.addFolder('Awesome cube');
+cubeTweaks.add(mesh.position, 'y').min(-3).max(3).step(0.01).name('elevation');
+
+cubeTweaks.add(mesh, 'visible');
+
+cubeTweaks.add(material, 'wireframe');
+
+cubeTweaks.addColor(debugObject, 'color').onChange((value) => {
+  material.color.set(debugObject.color);
+});
+
+debugObject.spin = () => {
+  gsap.to(mesh.rotation, { y: mesh.rotation.y + Math.PI * 2 });
+};
+cubeTweaks.add(debugObject, 'spin');
+
+debugObject.subdivision = 2;
+cubeTweaks
+  .add(debugObject, 'subdivision')
+  .min(1)
+  .max(20)
+  .step(1)
+  .onFinishChange(() => {
+    // for preventing GPU leaks
+    mesh.geometry.dispose();
+    mesh.geometry = new THREE.BoxGeometry(
+      1,
+      1,
+      1,
+      debugObject.subdivision,
+      debugObject.subdivision,
+      debugObject.subdivision
+    );
+  });
+
+/**
+ * Sizes
+ */
 const sizes = {
   width: window.innerWidth,
   height: window.innerHeight,
@@ -52,28 +101,37 @@ window.addEventListener('resize', () => {
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 });
 
-// Camera
+/**
+ * Camera
+ */
+// Base camera
 const camera = new THREE.PerspectiveCamera(
   75,
   sizes.width / sizes.height,
   0.1,
   100
 );
-camera.position.z = 3;
+camera.position.x = 1;
+camera.position.y = 1;
+camera.position.z = 2;
 scene.add(camera);
 
 // Controls
 const controls = new OrbitControls(camera, canvas);
 controls.enableDamping = true;
 
-// Renderer
+/**
+ * Renderer
+ */
 const renderer = new THREE.WebGLRenderer({
   canvas: canvas,
 });
 renderer.setSize(sizes.width, sizes.height);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
-// Animate
+/**
+ * Animate
+ */
 const clock = new THREE.Clock();
 
 const tick = () => {
